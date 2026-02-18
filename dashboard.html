@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Europe AIC Dashboard 2024</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f1419 0%, #1a2634 50%, #0f1419 100%);
+            min-height: 100vh;
+            color: #e8e6e3;
+        }
+
+        .dashboard {
+            padding: 24px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            margin-bottom: 32px;
+        }
+
+        .header-logo {
+            height: 20px;
+            margin-bottom: 24px;
+            display: block;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #9ca3af;
+            font-size: 14px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255,255,255,0.05);
+            color: #9ca3af;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #2d6a4f, #40916c);
+            color: #fff;
+        }
+
+        .panel {
+            background: rgba(255,255,255,0.02);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .panel h3 {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 20px;
+        }
+
+        /* Map styles */
+        #map-container {
+            height: 500px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(255,255,255,0.02);
+        }
+
+        .map-legend {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+        }
+
+        /* Table styles */
+        .table-container {
+            overflow-x: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            text-align: left;
+            padding: 10px 8px;
+            color: #6b7280;
+            font-weight: 500;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th:hover {
+            color: #9ca3af;
+        }
+
+        th.sortable::after {
+            content: ' ↕';
+            opacity: 0.3;
+        }
+
+        th.sorted-asc::after {
+            content: ' ↑';
+            opacity: 1;
+            color: #74c69d;
+        }
+
+        th.sorted-desc::after {
+            content: ' ↓';
+            opacity: 1;
+            color: #74c69d;
+        }
+
+        td {
+            padding: 8px 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+
+        tr:hover {
+            background: rgba(255,255,255,0.02);
+        }
+
+        .country-name {
+            font-weight: 500;
+        }
+
+        .country-tag {
+            display: inline-block;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-size: 9px;
+            margin-left: 6px;
+        }
+
+        .tag-eu {
+            background: rgba(45, 106, 79, 0.2);
+            color: #74c69d;
+        }
+
+        .tag-non-eu {
+            background: rgba(107, 114, 128, 0.2);
+            color: #9ca3af;
+        }
+
+        .tag-candidate {
+            background: rgba(255, 209, 102, 0.2);
+            color: #ffd166;
+        }
+
+        .numeric {
+            font-family: 'SF Mono', Monaco, monospace;
+            text-align: right;
+        }
+
+        /* Benchmark styles */
+        .benchmark-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+        }
+
+        @media (max-width: 900px) {
+            .benchmark-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .benchmark-card {
+            background: rgba(255,255,255,0.02);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .benchmark-card h4 {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+
+        .benchmark-card h4 .icon {
+            font-size: 16px;
+        }
+
+        .benchmark-card.top h4 {
+            color: #74c69d;
+        }
+
+        .benchmark-card.bottom h4 {
+            color: #f4a261;
+        }
+
+        .benchmark-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .benchmark-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.2);
+        }
+
+        .benchmark-item.highlight {
+            background: rgba(45, 106, 79, 0.15);
+        }
+
+        .benchmark-item.highlight-bottom {
+            background: rgba(244, 162, 97, 0.15);
+        }
+
+        .benchmark-rank {
+            color: #6b7280;
+            font-size: 12px;
+            min-width: 24px;
+        }
+
+        .benchmark-country {
+            flex: 1;
+            margin-left: 8px;
+        }
+
+        .benchmark-value {
+            font-family: 'SF Mono', Monaco, monospace;
+            font-weight: 600;
+            color: #74c69d;
+        }
+
+        .benchmark-card.bottom .benchmark-value {
+            color: #f4a261;
+        }
+
+        .section-divider {
+            text-align: center;
+            margin: 32px 0 24px;
+            color: #6b7280;
+            font-size: 13px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Tooltip for map */
+        .map-tooltip {
+            position: absolute;
+            background: rgba(26, 38, 52, 0.97);
+            border-radius: 10px;
+            padding: 14px 18px;
+            pointer-events: none;
+            z-index: 2000;
+            min-width: 200px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255,255,255,0.1);
+            display: none;
+        }
+
+        .map-tooltip.visible {
+            display: block;
+        }
+
+        .map-tooltip .tooltip-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #74c69d;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .map-tooltip .tooltip-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            font-size: 13px;
+        }
+
+        .map-tooltip .tooltip-label {
+            color: #9ca3af;
+        }
+
+        .map-tooltip .tooltip-value {
+            font-weight: 600;
+            color: #e8e6e3;
+            font-family: 'SF Mono', Monaco, monospace;
+        }
+
+        .leaflet-container {
+            background: #151d28;
+        }
+
+        .data-note {
+            margin-top: 24px;
+            padding: 16px;
+            text-align: center;
+            font-size: 12px;
+            color: #6b7280;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+
+        /* Share buttons */
+        .share-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .share-label {
+            font-size: 13px;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .share-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.08);
+            color: #b0aca6;
+            cursor: pointer;
+            transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .share-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .share-linkedin:hover {
+            background: rgba(10, 102, 194, 0.2);
+            color: #0a66c2;
+            border-color: rgba(10, 102, 194, 0.3);
+        }
+
+        .share-facebook:hover {
+            background: rgba(24, 119, 242, 0.2);
+            color: #1877f2;
+            border-color: rgba(24, 119, 242, 0.3);
+        }
+
+        .share-x:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #e8e6e3;
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        .share-mail:hover {
+            background: rgba(116, 198, 157, 0.2);
+            color: #74c69d;
+            border-color: rgba(116, 198, 157, 0.3);
+        }
+
+        /* Methodology styles */
+        .methodology-panel .method-section {
+            margin-bottom: 28px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .methodology-panel .method-section:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .methodology-panel .method-section h4 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #74c69d;
+            margin-bottom: 10px;
+        }
+
+        .methodology-panel .method-section p {
+            font-size: 14px;
+            line-height: 1.7;
+            color: #b0aca6;
+        }
+
+        .method-definitions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .method-def {
+            display: flex;
+            gap: 16px;
+            padding: 12px 16px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            align-items: baseline;
+        }
+
+        .method-term {
+            font-weight: 600;
+            color: #e8e6e3;
+            min-width: 100px;
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+
+        .method-desc {
+            font-size: 13px;
+            color: #9ca3af;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 768px) {
+            .method-def {
+                flex-direction: column;
+                gap: 4px;
+            }
+            .method-term {
+                min-width: auto;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .tabs {
+                gap: 4px;
+            }
+            .tab-btn {
+                padding: 8px 10px;
+                font-size: 14px;
+            }
+            .country-tag { display: none; }
+            table { font-size: 12px; }
+            th, td { padding: 6px 4px; }
+            .numeric { font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // AIC Data 2024 - Updated January 2026
+        const aicData = {
+            "Luxembourg": { pps: 38500, nominal: 56823, pli: 148, index: 146, isEU: true },
+            "Norway": { pps: 31800, nominal: 43799, pli: 138, index: 121, isEU: false },
+            "Netherlands": { pps: 31700, nominal: 37972, pli: 120, index: 120, isEU: true },
+            "Germany": { pps: 31400, nominal: 34356, pli: 109, index: 119, isEU: true },
+            "Iceland": { pps: 30400, nominal: 52289, pli: 172, index: 116, isEU: false },
+            "Switzerland": { pps: 30500, nominal: 55412, pli: 182, index: 116, isEU: false },
+            "Austria": { pps: 30200, nominal: 35543, pli: 118, index: 114, isEU: true },
+            "Belgium": { pps: 29900, nominal: 35364, pli: 118, index: 113, isEU: true },
+            "United Kingdom": { pps: 29200, nominal: 36718, pli: 126, index: 111, isEU: false },
+            "France": { pps: 27800, nominal: 29931, pli: 108, index: 106, isEU: true },
+            "Denmark": { pps: 27700, nominal: 39076, pli: 141, index: 105, isEU: true },
+            "Sweden": { pps: 27100, nominal: 33796, pli: 125, index: 103, isEU: true },
+            "Finland": { pps: 26900, nominal: 34392, pli: 128, index: 102, isEU: true },
+            "Ireland": { pps: 26300, nominal: 37124, pli: 141, index: 100, isEU: true },
+            "Italy": { pps: 25800, nominal: 25307, pli: 98, index: 98, isEU: true },
+            "Cyprus": { pps: 25800, nominal: 24247, pli: 94, index: 98, isEU: true },
+            "Spain": { pps: 24100, nominal: 21862, pli: 91, index: 91, isEU: true },
+            "Malta": { pps: 23600, nominal: 22339, pli: 95, index: 90, isEU: true },
+            "Lithuania": { pps: 23200, nominal: 18209, pli: 78, index: 88, isEU: true },
+            "Portugal": { pps: 22600, nominal: 19217, pli: 85, index: 86, isEU: true },
+            "Slovenia": { pps: 22600, nominal: 20497, pli: 91, index: 86, isEU: true },
+            "Romania": { pps: 22600, nominal: 13095, pli: 58, index: 86, isEU: true },
+            "Poland": { pps: 22300, nominal: 15602, pli: 70, index: 85, isEU: true },
+            "Czechia": { pps: 21500, nominal: 17393, pli: 81, index: 82, isEU: true },
+            "Greece": { pps: 20900, nominal: 17500, pli: 84, index: 79, isEU: true },
+            "Croatia": { pps: 20800, nominal: 15389, pli: 74, index: 79, isEU: true },
+            "Slovakia": { pps: 20400, nominal: 16483, pli: 81, index: 77, isEU: true },
+            "Estonia": { pps: 19600, nominal: 19030, pli: 97, index: 74, isEU: true },
+            "Bulgaria": { pps: 19200, nominal: 11054, pli: 58, index: 73, isEU: true },
+            "Hungary": { pps: 19100, nominal: 13171, pli: 69, index: 73, isEU: true },
+            "Latvia": { pps: 19000, nominal: 15159, pli: 80, index: 72, isEU: true },
+            "Turkey": { pps: 18800, nominal: 9201, pli: 49, index: 71, isEU: false, isCandidate: true },
+            "Montenegro": { pps: 18300, nominal: 10858, pli: 59, index: 70, isEU: false, isCandidate: true },
+            "Serbia": { pps: 14800, nominal: 9049, pli: 61, index: 56, isEU: false, isCandidate: true },
+            "North Macedonia": { pps: 12900, nominal: 6325, pli: 49, index: 49, isEU: false, isCandidate: true },
+            "Albania": { pps: 12300, nominal: 7903, pli: 64, index: 47, isEU: false, isCandidate: true },
+            "Bosnia and Herzegovina": { pps: 11100, nominal: 6053, pli: 55, index: 42, isEU: false, isCandidate: true }
+        };
+
+        // Country code mapping
+        const countryCodes = {
+            "Luxembourg": "LU", "Norway": "NO", "Netherlands": "NL", "Germany": "DE",
+            "Iceland": "IS", "Switzerland": "CH", "Austria": "AT", "Belgium": "BE",
+            "United Kingdom": "UK", "France": "FR", "Denmark": "DK", "Sweden": "SE",
+            "Finland": "FI", "Ireland": "IE", "Italy": "IT", "Cyprus": "CY",
+            "Spain": "ES", "Malta": "MT", "Lithuania": "LT", "Portugal": "PT",
+            "Slovenia": "SI", "Romania": "RO", "Poland": "PL", "Czechia": "CZ",
+            "Greece": "GR", "Croatia": "HR", "Slovakia": "SK", "Estonia": "EE",
+            "Bulgaria": "BG", "Hungary": "HU", "Latvia": "LV", "Turkey": "TR",
+            "Montenegro": "ME", "Serbia": "RS", "North Macedonia": "MK",
+            "Albania": "AL", "Bosnia and Herzegovina": "BA"
+        };
+
+        const isMobileView = window.innerWidth <= 768;
+
+        // Convert to array for easier manipulation
+        const countriesArray = Object.entries(aicData).map(([name, data]) => ({
+            name,
+            code: countryCodes[name] || name,
+            ...data
+        }));
+
+        // Color function based on PPS
+        function getColor(pps) {
+            if (pps >= 33000) return '#5b4db8';
+            if (pps >= 30000) return '#2166ac';
+            if (pps >= 25000) return '#5299c1';
+            if (pps >= 23000) return '#a8d0e6';
+            if (pps >= 20000) return '#ef8a62';
+            if (pps >= 18000) return '#b2182b';
+            return '#67001f';
+        }
+
+        // Legend items
+        const legendItems = [
+            { label: '≥ 33,000', color: '#5b4db8' },
+            { label: '30,000 – 33,000', color: '#2166ac' },
+            { label: '25,000 – 30,000', color: '#5299c1' },
+            { label: 'EU = 26,300', color: null, isEUFlag: true },
+            { label: '23,000 – 25,000', color: '#a8d0e6' },
+            { label: '20,000 – 23,000', color: '#ef8a62' },
+            { label: '18,000 – 20,000', color: '#b2182b' },
+            { label: '< 15,000', color: '#67001f' },
+            { label: 'No data available', color: '#cccccc' }
+        ];
+
+        // Map Tab Component
+        function MapTab() {
+            const mapRef = React.useRef(null);
+            const leafletMapRef = React.useRef(null);
+            const tooltipRef = React.useRef(null);
+
+            React.useEffect(() => {
+                if (leafletMapRef.current) return;
+
+                // Initialize map
+                const map = L.map(mapRef.current, {
+                    center: [54, 15],
+                    zoom: 6,
+                    minZoom: 3,
+                    maxZoom: 8,
+                    maxBounds: [[34, -15], [72, 50]],
+                    maxBoundsViscosity: 1.0
+                });
+
+                leafletMapRef.current = map;
+
+                // Country name mapping for GeoJSON
+                const nameMapping = {
+                    "Czech Republic": "Czechia",
+                    "The former Yugoslav Republic of Macedonia": "North Macedonia",
+                    "Bosnia and Herz.": "Bosnia and Herzegovina"
+                };
+
+                // Style function
+                function style(feature) {
+                    const geoName = feature.properties.name || feature.properties.NAME || feature.properties.ADMIN;
+                    const countryName = nameMapping[geoName] || geoName;
+                    const data = aicData[countryName];
+                    const pps = data ? data.pps : null;
+
+                    return {
+                        fillColor: pps ? getColor(pps) : '#cccccc',
+                        weight: 1,
+                        opacity: 1,
+                        color: '#ffffff',
+                        fillOpacity: 0.85
+                    };
+                }
+
+                // Check if country has data
+                function hasData(name) {
+                    const countryName = nameMapping[name] || name;
+                    return aicData[countryName] !== undefined;
+                }
+
+                // Highlight feature
+                function highlightFeature(e) {
+                    const layer = e.target;
+                    layer.setStyle({
+                        weight: 2,
+                        color: '#333',
+                        fillOpacity: 0.95
+                    });
+                    layer.bringToFront();
+
+                    // Show tooltip
+                    const geoName = layer.feature.properties.name || layer.feature.properties.NAME || layer.feature.properties.ADMIN;
+                    const countryName = nameMapping[geoName] || geoName;
+                    const data = aicData[countryName];
+                    const tooltip = tooltipRef.current;
+
+                    if (tooltip) {
+                        if (data) {
+                            tooltip.innerHTML = `
+                                <div class="tooltip-title">${countryName}</div>
+                                <div class="tooltip-row"><span class="tooltip-label">AIC Index</span><span class="tooltip-value">${data.index}%</span></div>
+                                <div class="tooltip-row"><span class="tooltip-label">PLI</span><span class="tooltip-value">${data.pli}</span></div>
+                                <div class="tooltip-row"><span class="tooltip-label">Nominal</span><span class="tooltip-value">€${data.nominal.toLocaleString()}</span></div>
+                                <div class="tooltip-row"><span class="tooltip-label">PPS</span><span class="tooltip-value">${data.pps.toLocaleString()}</span></div>
+                            `;
+                        } else {
+                            tooltip.innerHTML = `
+                                <div class="tooltip-title">${countryName}</div>
+                                <div class="tooltip-row"><span class="tooltip-value" style="color: #6b7280;">No data available</span></div>
+                            `;
+                        }
+                        tooltip.classList.add('visible');
+                    }
+                }
+
+                // Move tooltip
+                function moveTooltip(e) {
+                    const tooltip = tooltipRef.current;
+                    if (!tooltip) return;
+
+                    const x = e.originalEvent.pageX + 15;
+                    const y = e.originalEvent.pageY + 15;
+
+                    const tooltipWidth = tooltip.offsetWidth || 200;
+                    const tooltipHeight = tooltip.offsetHeight || 150;
+                    const windowWidth = window.innerWidth;
+                    const windowHeight = window.innerHeight;
+
+                    let posX = x;
+                    let posY = y;
+
+                    if (x + tooltipWidth > windowWidth - 20) {
+                        posX = e.originalEvent.pageX - tooltipWidth - 15;
+                    }
+                    if (y + tooltipHeight > windowHeight - 20) {
+                        posY = e.originalEvent.pageY - tooltipHeight - 15;
+                    }
+
+                    tooltip.style.left = posX + 'px';
+                    tooltip.style.top = posY + 'px';
+                }
+
+                // Reset highlight
+                let geojsonLayer;
+                function resetHighlight(e) {
+                    geojsonLayer.resetStyle(e.target);
+                    const tooltip = tooltipRef.current;
+                    if (tooltip) tooltip.classList.remove('visible');
+                }
+
+                // On each feature
+                function onEachFeature(feature, layer) {
+                    layer.on({
+                        mouseover: highlightFeature,
+                        mouseout: resetHighlight,
+                        mousemove: moveTooltip
+                    });
+                }
+
+                // Load GeoJSON
+                fetch('https://raw.githubusercontent.com/leakyMirror/map-of-europe/master/GeoJSON/europe.geojson')
+                    .then(response => response.json())
+                    .then(data => {
+                        // Exclude certain territories
+                        const excludeCountries = ['Faroe Islands', 'Israel'];
+                        data.features = data.features.filter(f => {
+                            const name = f.properties.name || f.properties.NAME || f.properties.ADMIN;
+                            return !excludeCountries.includes(name);
+                        });
+
+                        geojsonLayer = L.geoJSON(data, {
+                            style: style,
+                            onEachFeature: onEachFeature
+                        }).addTo(map);
+
+                        map.fitBounds(geojsonLayer.getBounds());
+                    });
+
+                return () => {
+                    if (leafletMapRef.current) {
+                        leafletMapRef.current.remove();
+                        leafletMapRef.current = null;
+                    }
+                };
+            }, []);
+
+            return (
+                <div className="panel">
+                    <h3>Actual Individual Consumption (AIC) per Capita by Country — 2024 (Point or Click on Country to See Data)</h3>
+                    <div id="map-container" ref={mapRef}></div>
+                    <div className="map-legend">
+                        {legendItems.map(item => (
+                            <div key={item.label} className="legend-item">
+                                {item.isEUFlag ? (
+                                    <React.Fragment>
+                                        <span style={{ fontSize: '16px', marginRight: '4px' }}>🇪🇺</span>
+                                        <span style={{ fontWeight: '600', color: '#74c69d' }}>{item.label}</span>
+                                    </React.Fragment>
+                                ) : (
+                                    <React.Fragment>
+                                        <div className="legend-color" style={{ background: item.color }}></div>
+                                        <span>{item.label}</span>
+                                    </React.Fragment>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                    <div className="map-tooltip" ref={tooltipRef}></div>
+                </div>
+            );
+        }
+
+        // Table Tab Component
+        function TableTab() {
+            const [sortField, setSortField] = React.useState('pps');
+            const [sortOrder, setSortOrder] = React.useState('desc');
+            const sortedData = React.useMemo(() => {
+                return [...countriesArray].sort((a, b) => {
+                    const aVal = a[sortField];
+                    const bVal = b[sortField];
+                    return sortOrder === 'desc' ? bVal - aVal : aVal - bVal;
+                });
+            }, [sortField, sortOrder]);
+
+            const handleSort = (field) => {
+                if (sortField === field) {
+                    setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc');
+                } else {
+                    setSortField(field);
+                    setSortOrder('desc');
+                }
+            };
+
+            const getSortClass = (field) => {
+                if (sortField !== field) return 'sortable';
+                return sortOrder === 'desc' ? 'sorted-desc' : 'sorted-asc';
+            };
+
+            return (
+                <div className="panel">
+                    <h3>Country Data — 2024</h3>
+                    <div className="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Country</th>
+                                    <th className={getSortClass('index')} onClick={() => handleSort('index')} style={{ textAlign: 'right' }}>Index</th>
+                                    <th className={getSortClass('pli')} onClick={() => handleSort('pli')} style={{ textAlign: 'right' }}>PLI</th>
+                                    <th className={getSortClass('nominal')} onClick={() => handleSort('nominal')} style={{ textAlign: 'right' }}>EUR</th>
+                                    <th className={getSortClass('pps')} onClick={() => handleSort('pps')} style={{ textAlign: 'right' }}>PPS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {sortedData.map((country, idx) => (
+                                    <tr key={country.name}>
+                                        <td style={{ color: '#6b7280' }}>{idx + 1}</td>
+                                        <td>
+                                            <span className="country-name">{isMobileView ? country.code : country.name}</span>
+                                            {!isMobileView && country.isEU && <span className="country-tag tag-eu">EU</span>}
+                                            {!isMobileView && !country.isEU && country.isCandidate && <span className="country-tag tag-candidate">Candidate</span>}
+                                            {!isMobileView && !country.isEU && !country.isCandidate && <span className="country-tag tag-non-eu">Non-EU</span>}
+                                        </td>
+                                        <td className="numeric">{country.index}%</td>
+                                        <td className="numeric">{country.pli}</td>
+                                        <td className="numeric">€{country.nominal.toLocaleString()}</td>
+                                        <td className="numeric" style={{ fontWeight: 600, color: '#74c69d' }}>{country.pps.toLocaleString()}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        }
+
+        // Benchmark Tab Component
+        function BenchmarkTab() {
+            const benchmarks = React.useMemo(() => {
+                const euCountries = countriesArray.filter(c => c.isEU);
+                const allCountries = countriesArray;
+
+                const sortByPps = (arr, order = 'desc') => {
+                    return [...arr].sort((a, b) => order === 'desc' ? b.pps - a.pps : a.pps - b.pps);
+                };
+
+                return {
+                    topEU: sortByPps(euCountries, 'desc').slice(0, 5),
+                    bottomEU: sortByPps(euCountries, 'asc').slice(0, 5),
+                    topAll: sortByPps(allCountries, 'desc').slice(0, 5),
+                    bottomAll: sortByPps(allCountries, 'asc').slice(0, 5)
+                };
+            }, []);
+
+            const BenchmarkCard = ({ title, data, isTop, showTag = false }) => (
+                <div className={`benchmark-card ${isTop ? 'top' : 'bottom'}`}>
+                    <h4>
+                        <span className="icon">{isTop ? '▲' : '▼'}</span>
+                        {title}
+                    </h4>
+                    <div className="benchmark-list">
+                        {data.map((country, idx) => (
+                            <div
+                                key={country.name}
+                                className={`benchmark-item ${idx === 0 ? (isTop ? 'highlight' : 'highlight-bottom') : ''}`}
+                            >
+                                <span className="benchmark-rank">{idx + 1}.</span>
+                                <span className="benchmark-country">
+                                    {country.name}
+                                    {showTag && !country.isEU && (
+                                        <span className="country-tag tag-non-eu" style={{ marginLeft: 8 }}>Non-EU</span>
+                                    )}
+                                </span>
+                                <span className="benchmark-value">{country.pps.toLocaleString()}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="panel">
+                    <h3>Benchmark Analysis — 2024 (PPS per Capita)</h3>
+
+                    <div className="section-divider">EU Member States</div>
+                    <div className="benchmark-grid">
+                        <BenchmarkCard title="Top 5 EU Countries" data={benchmarks.topEU} isTop={true} />
+                        <BenchmarkCard title="Bottom 5 EU Countries" data={benchmarks.bottomEU} isTop={false} />
+                    </div>
+
+                    <div className="section-divider">All European Countries</div>
+                    <div className="benchmark-grid">
+                        <BenchmarkCard title="Top 5 European Countries" data={benchmarks.topAll} isTop={true} showTag={true} />
+                        <BenchmarkCard title="Bottom 5 European Countries" data={benchmarks.bottomAll} isTop={false} showTag={true} />
+                    </div>
+                </div>
+            );
+        }
+
+        // Methodology Tab Component
+        function MethodologyTab() {
+            return (
+                <div className="panel methodology-panel">
+                    <h3>Methodology</h3>
+
+                    <div className="method-section">
+                        <h4>Why AIC, not GDP?</h4>
+                        <p>GDP measures what a country produces. But Luxembourg's GDP is inflated by commuters who work there but spend their money at home. AIC (Actual Individual Consumption) measures what people actually consume — a better indicator of living standards.</p>
+                    </div>
+
+                    <div className="method-section">
+                        <h4>What's included?</h4>
+                        <p>Everything households consume: food, housing, transport, plus government-provided services like healthcare and education. It doesn't matter who pays — what matters is who benefits.</p>
+                    </div>
+
+                    <div className="method-section">
+                        <h4>Why PPS, not euros?</h4>
+                        <p>A haircut costs €50 in Copenhagen and €10 in Sofia. Comparing raw euros would make Danes look 5× richer — but they're not, things just cost more. PPS (Purchasing Power Standard) adjusts for this, so we compare what people can actually afford.</p>
+                    </div>
+
+                    <div className="method-section">
+                        <h4>The numbers</h4>
+                        <div className="method-definitions">
+                            <div className="method-def">
+                                <span className="method-term">AIC Index</span>
+                                <span className="method-desc">How a country compares to EU average (100%). Latvia at 72% means Latvians consume 28% less than the EU average.</span>
+                            </div>
+                            <div className="method-def">
+                                <span className="method-term">PLI</span>
+                                <span className="method-desc">How expensive a country is. Switzerland at 182 means prices are 82% above EU average.</span>
+                            </div>
+                            <div className="method-def">
+                                <span className="method-term">AIC in PPS</span>
+                                <span className="method-desc">The actual purchasing power — 26,300 is the EU average.</span>
+                            </div>
+                            <div className="method-def">
+                                <span className="method-term">AIC in EUR</span>
+                                <span className="method-desc">What people spend in nominal terms.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="method-section">
+                        <h4>Data</h4>
+                        <p>Source: Eurostat (<a href="https://ec.europa.eu/eurostat/databrowser/view/prc_ppp_ind_1/default/table" target="_blank" rel="noopener noreferrer" style={{color: '#74c69d', textDecoration: 'underline'}}>prc_ppp_ind_1</a>), January 2026 release. 2024 is the most recent year available — Eurostat publishes with a one-year lag.</p>
+                    </div>
+                </div>
+            );
+        }
+
+        // Share Buttons Component
+        function ShareButtons() {
+            const pageUrl = encodeURIComponent(window.location.href);
+            const pageTitle = encodeURIComponent('How living standards compare across Europe — AIC per capita 2024');
+            const pageDesc = encodeURIComponent('Interactive dashboard comparing Actual Individual Consumption across European countries, adjusted for purchasing power. Data: Eurostat 2024.');
+
+            const share = (platform) => {
+                const urls = {
+                    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${pageUrl}`,
+                    facebook: `https://www.facebook.com/sharer/sharer.php?u=${pageUrl}`,
+                    x: `https://x.com/intent/tweet?url=${pageUrl}&text=${pageTitle}`,
+                    mail: `mailto:?subject=${pageTitle}&body=${pageDesc}%0A%0A${pageUrl}`
+                };
+                if (platform === 'mail') {
+                    window.location.href = urls[platform];
+                } else {
+                    window.open(urls[platform], '_blank', 'width=600,height=500');
+                }
+            };
+
+            return (
+                <div className="share-bar">
+                    <span className="share-label">Share</span>
+                    <button className="share-btn share-linkedin" onClick={() => share('linkedin')} title="Share on LinkedIn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                    </button>
+                    <button className="share-btn share-facebook" onClick={() => share('facebook')} title="Share on Facebook">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                    </button>
+                    <button className="share-btn share-x" onClick={() => share('x')} title="Share on X">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                    </button>
+                    <button className="share-btn share-mail" onClick={() => share('mail')} title="Share via Email">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M1.5 8.67v8.58a3 3 0 003 3h15a3 3 0 003-3V8.67l-8.928 5.493a3 3 0 01-3.144 0L1.5 8.67z"/><path d="M22.5 6.908V6.75a3 3 0 00-3-3h-15a3 3 0 00-3 3v.158l9.714 5.978a1.5 1.5 0 001.572 0L22.5 6.908z"/></svg>
+                    </button>
+                </div>
+            );
+        }
+
+        // Main Dashboard Component
+        function Dashboard() {
+            const [activeTab, setActiveTab] = React.useState('map');
+
+            return (
+                <div className="dashboard">
+                    <div className="header">
+                        <a href="https://rvnu.org" target="_blank" rel="noopener noreferrer"><img src="logo.png" alt="rvnu" className="header-logo" /></a>
+                        <h1>How living standards compare across Europe</h1>
+                        <p>2024 Actual Individual Consumption per capita Analysis<br/>Data Source: <a href="https://ec.europa.eu/eurostat/databrowser/view/prc_ppp_ind_1/default/table" target="_blank" rel="noopener noreferrer" style={{color: '#74c69d', textDecoration: 'underline'}}>Eurostat</a></p>
+                        <p style={{marginTop: '12px', lineHeight: '1.6'}}>
+                            The EU tracks what people across Europe actually consume — adjusted for price differences, not just salaries or GDP. It's called Actual Individual Consumption, and it's how the EU decides where convergence funding goes and whether the single market is actually working for everyone.
+                        </p>
+                        <p style={{marginTop: '8px', lineHeight: '1.6'}}>
+                            All of this data is public. The problem is that Eurostat publishes it in <a href="https://ec.europa.eu/eurostat/databrowser/view/prc_ppp_ind_1/default/table" target="_blank" rel="noopener noreferrer" style={{color: '#74c69d', textDecoration: 'underline'}}>statistical tables</a> meant for policy analysts, not regular people.
+                        </p>
+                        <p style={{marginTop: '8px', lineHeight: '1.6'}}>
+                            I built this to make the 2024 data across 37 European countries readable for anyone.
+                        </p>
+                    </div>
+
+                    <ShareButtons />
+
+                    <div className="tabs">
+                        <button
+                            className={`tab-btn ${activeTab === 'map' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('map')}
+                        >
+                            Map
+                        </button>
+                        <button
+                            className={`tab-btn ${activeTab === 'table' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('table')}
+                        >
+                            Table
+                        </button>
+                        <button
+                            className={`tab-btn ${activeTab === 'benchmark' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('benchmark')}
+                        >
+                            Benchmarks
+                        </button>
+                        <button
+                            className={`tab-btn ${activeTab === 'methodology' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('methodology')}
+                        >
+                            Methodology
+                        </button>
+                    </div>
+
+                    {activeTab === 'map' && <MapTab />}
+                    {activeTab === 'table' && <TableTab />}
+                    {activeTab === 'benchmark' && <BenchmarkTab />}
+                    {activeTab === 'methodology' && <MethodologyTab />}
+
+
+                    <div className="data-note">
+                        <span>Author: Anton Blagov</span>
+                        <a href="https://www.linkedin.com/in/aiblagov/" target="_blank" rel="noopener noreferrer" style={{color: '#0a66c2', display: 'inline-flex', verticalAlign: 'middle', marginLeft: '6px'}}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                        </a>
+                        <span style={{margin: '0 12px'}}>|</span>
+                        <span>&copy; <a href="https://rvnu.org" target="_blank" rel="noopener noreferrer" style={{color: '#74c69d', textDecoration: 'none'}}>rvnu.org</a> 2026</span>
+                    </div>
+
+                </div>
+            );
+        }
+
+        // Render
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Dashboard />);
+    </script>
+</body>
+</html>

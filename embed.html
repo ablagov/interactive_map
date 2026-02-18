@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Europe AIC Per Capita 2024</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        #benchmark { display: none !important; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="legend">
+        <h4>AIC per capita (PPS/year)</h4>
+        <div class="legend-item"><span class="color-box" style="background: #5b4db8;"></span> ≥ 33,000</div>
+        <div class="legend-item"><span class="color-box" style="background: #2166ac;"></span> 30,000 – 33,000</div>
+        <div class="legend-item"><span class="color-box" style="background: #5299c1;"></span> 25,000 – 30,000</div>
+        <div class="legend-item"><span class="color-box" style="background: #a8d0e6;"></span> 23,000 – 25,000</div>
+        <div class="legend-item"><span class="color-box" style="background: #ef8a62;"></span> 20,000 – 23,000</div>
+        <div class="legend-item"><span class="color-box" style="background: #b2182b;"></span> 18,000 – 20,000</div>
+        <div class="legend-item"><span class="color-box" style="background: #67001f;"></span> < 15,000</div>
+    </div>
+    <div id="tooltip"></div>
+    <div id="mobile-panel"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>window.isEmbed = true;</script>
+    <script src="js/app.js"></script>
+</body>
+</html>
